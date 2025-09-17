@@ -481,8 +481,9 @@ app.use((req, res) => {
 });
 
 // Start server
-app.listen(PORT, async () => {
-    console.log(`🚀 AhamAI WhatsApp Bot server running on port ${PORT}`);
+const HOST = process.env.HOST || '0.0.0.0';
+app.listen(PORT, HOST, async () => {
+    console.log(`🚀 AhamAI WhatsApp Bot server running on ${HOST}:${PORT}`);
     console.log(`🌐 Health check: http://localhost:${PORT}/health`);
     console.log(`📊 Status: http://localhost:${PORT}/status`);
     
