@@ -3,7 +3,6 @@ const axios = require('axios');
 const cors = require('cors');
 const helmet = require('helmet');
 const morgan = require('morgan');
-require('dotenv').config();
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -15,28 +14,59 @@ app.use(morgan('combined'));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// WhatsApp API Configuration
+// WhatsApp API Configuration - Hardcoded (no .env needed)
 const WHATSAPP_CONFIG = {
-    baseURL: process.env.WHATSAPP_API_URL || 'https://wp.privateinstance.com',
-    sessionId: process.env.WHATSAPP_SESSION_ID,
-    apiKey: process.env.WHATSAPP_API_KEY
+    baseURL: 'https://wp.privateinstance.com',
+    sessionId: 'b8c7031a-b7e2-44c7-b626-6eded8475135',
+    apiKey: '6db5e284-b9e6-4315-b60b-b66faa9ab3c5'
 };
 
-// OpenAI API Configuration
+// OpenAI API Configuration - Hardcoded (no .env needed)
 const OPENAI_CONFIG = {
-    baseURL: process.env.OPENAI_API_URL || 'https://longcat-openai-api.onrender.com',
-    apiKey: process.env.OPENAI_API_KEY
+    baseURL: 'https://longcat-openai-api.onrender.com',
+    apiKey: 'pikachu@#25D'
+};
+
+// Available AI Models Configuration
+const AI_MODELS = {
+    // Chat/Text Models
+    chat: [
+        { id: 'longcat-chat', name: 'LongCat Chat', provider: 'longcat', type: 'chat' },
+        { id: 'gemini-2.5-pro', name: 'Gemini 2.5 Pro', provider: 'google', type: 'chat' },
+        { id: 'gemini-2.5-deep', name: 'Gemini 2.5 Deep', provider: 'google', type: 'chat' },
+        { id: 'gemini-2.5-flash', name: 'Gemini 2.5 Flash', provider: 'google', type: 'chat' },
+        { id: 'gpt-4', name: 'GPT-4', provider: 'openai', type: 'chat' },
+        { id: 'gpt-4o', name: 'GPT-4o', provider: 'openai', type: 'chat' },
+        { id: 'gpt-5', name: 'GPT-5', provider: 'openai', type: 'chat' },
+        { id: 'o1', name: 'OpenAI O1', provider: 'openai', type: 'reasoning' },
+        { id: 'o3', name: 'OpenAI O3', provider: 'openai', type: 'reasoning' },
+        { id: 'nano-banana', name: 'Nano Banana', provider: 'nano-banana', type: 'chat' }
+    ],
+    // Image Generation Models
+    image: [
+        { id: 'imagen-3', name: 'Imagen 3', provider: 'google', type: 'image' },
+        { id: 'imagen-3.1', name: 'Imagen 3.1', provider: 'google', type: 'image' },
+        { id: 'imagen-3.5', name: 'Imagen 3.5', provider: 'google', type: 'image' }
+    ],
+    // Video Generation Models
+    video: [
+        { id: 'veo3-image-to-video', name: 'Veo3 Image to Video', provider: 'veo3', type: 'video' }
+    ]
 };
 
 // Bot Configuration
 const BOT_CONFIG = {
-    name: process.env.BOT_NAME || 'AhamAI',
-    description: process.env.BOT_DESCRIPTION || 'Your intelligent WhatsApp assistant powered by AI',
-    welcomeMessage: `🤖 Hello! I'm ${process.env.BOT_NAME || 'AhamAI'}, your intelligent WhatsApp assistant.\n\nI can help you with:\n• Answering questions\n• General conversations\n• Information lookup\n• Creative tasks\n\nJust send me a message and I'll respond with AI-powered assistance!`,
+    name: 'AhamAI',
+    description: 'Your intelligent WhatsApp assistant powered by multiple AI models',
+    defaultModel: 'gpt-4o', // Default model for conversations
+    welcomeMessage: `🤖 Hello! I'm AhamAI, your intelligent WhatsApp assistant.\n\nI have access to multiple AI models:\n• GPT-4, GPT-4o, GPT-5\n• Gemini 2.5 Pro/Deep/Flash\n• OpenAI O1 & O3\n• Image generation with Imagen\n• And more!\n\nJust send me a message and I'll respond with AI-powered assistance!`,
     commands: {
         '/help': 'Show available commands and bot information',
         '/status': 'Check bot status',
-        '/about': 'Learn more about AhamAI'
+        '/about': 'Learn more about AhamAI',
+        '/models': 'List all available AI models',
+        '/model [name]': 'Switch to a specific AI model',
+        '/image [prompt]': 'Generate an image using AI'
     }
 };
 
@@ -45,6 +75,7 @@ class AhamAIBot {
         this.isRunning = false;
         this.messageQueue = [];
         this.processingMessage = false;
+        this.userPreferences = new Map(); // Store user model preferences
     }
 
     // Initialize the bot
@@ -96,7 +127,7 @@ class AhamAIBot {
             const response = await axios.post(
                 `${OPENAI_CONFIG.baseURL}/v1/chat/completions`,
                 {
-                    model: 'gpt-3.5-turbo',
+                    model: BOT_CONFIG.defaultModel,
                     messages: [{ role: 'user', content: 'Test connection' }],
                     max_tokens: 10
                 },
@@ -114,10 +145,31 @@ class AhamAIBot {
         }
     }
 
+    // Get user's preferred model or default
+    getUserModel(userId) {
+        return this.userPreferences.get(userId) || BOT_CONFIG.defaultModel;
+    }
+
+    // Set user's preferred model
+    setUserModel(userId, modelId) {
+        const allModels = [...AI_MODELS.chat, ...AI_MODELS.image, ...AI_MODELS.video];
+        const model = allModels.find(m => m.id === modelId);
+        if (model) {
+            this.userPreferences.set(userId, modelId);
+            return model;
+        }
+        return null;
+    }
+
     // Generate AI response
     async generateAIResponse(message, userInfo = {}) {
         try {
-            const systemPrompt = `You are ${BOT_CONFIG.name}, an intelligent and helpful WhatsApp assistant. 
+            const userId = userInfo.wid || 'default';
+            const selectedModel = this.getUserModel(userId);
+            
+            const systemPrompt = `You are ${BOT_CONFIG.name}, an intelligent and helpful WhatsApp assistant with access to multiple AI models.
+
+Current model: ${selectedModel}
             
 Key traits:
 - Friendly, professional, and concise
@@ -125,10 +177,12 @@ Key traits:
 - Use emojis appropriately to make conversations engaging
 - Keep responses under 1000 characters when possible
 - Be conversational and natural
+- Mention your current AI model when relevant
 
 User context:
 - Platform: WhatsApp
 - User Name: ${userInfo.pushname || 'User'}
+- Current AI Model: ${selectedModel}
 - Message: "${message}"
 
 Respond helpfully and naturally.`;
@@ -136,7 +190,7 @@ Respond helpfully and naturally.`;
             const response = await axios.post(
                 `${OPENAI_CONFIG.baseURL}/v1/chat/completions`,
                 {
-                    model: 'gpt-3.5-turbo',
+                    model: selectedModel,
                     messages: [
                         { role: 'system', content: systemPrompt },
                         { role: 'user', content: message }
@@ -156,6 +210,32 @@ Respond helpfully and naturally.`;
         } catch (error) {
             console.error('AI Response Error:', error.message);
             return `🤖 I'm having trouble generating a response right now. Please try again in a moment.\n\nError: ${error.message}`;
+        }
+    }
+
+    // Generate image using AI
+    async generateImage(prompt, userInfo = {}) {
+        try {
+            const response = await axios.post(
+                `${OPENAI_CONFIG.baseURL}/v1/images/generations`,
+                {
+                    model: 'imagen-3.5',
+                    prompt: prompt,
+                    n: 1,
+                    size: '1024x1024'
+                },
+                {
+                    headers: {
+                        'Authorization': `Bearer ${OPENAI_CONFIG.apiKey}`,
+                        'Content-Type': 'application/json'
+                    }
+                }
+            );
+
+            return response.data.data[0].url;
+        } catch (error) {
+            console.error('Image Generation Error:', error.message);
+            return null;
         }
     }
 
@@ -209,7 +289,21 @@ Respond helpfully and naturally.`;
 
             // Handle special commands
             if (body.startsWith('/')) {
-                response = await this.handleCommand(body.toLowerCase(), userInfo);
+                response = await this.handleCommand(body, userInfo, from);
+            } else if (body.toLowerCase().startsWith('generate image:') || body.toLowerCase().startsWith('/image ')) {
+                // Handle image generation
+                const prompt = body.replace(/^(generate image:|\/image )/i, '').trim();
+                if (prompt) {
+                    const imageUrl = await this.generateImage(prompt, userInfo);
+                    if (imageUrl) {
+                        // Send image (this would require additional WhatsApp API implementation)
+                        response = `🎨 I've generated an image for: "${prompt}"\n\n🖼️ Image URL: ${imageUrl}\n\n(Note: Direct image sending will be implemented in a future update)`;
+                    } else {
+                        response = `❌ Sorry, I couldn't generate an image for: "${prompt}". Please try a different prompt.`;
+                    }
+                } else {
+                    response = `🎨 Please provide a prompt for image generation.\n\nExample: /image a beautiful sunset over mountains`;
+                }
             } else {
                 // Generate AI response
                 response = await this.generateAIResponse(body, userInfo);
@@ -237,17 +331,42 @@ Respond helpfully and naturally.`;
     }
 
     // Handle bot commands
-    async handleCommand(command, userInfo) {
-        switch (command) {
+    async handleCommand(command, userInfo, userId) {
+        const cmd = command.toLowerCase().split(' ')[0];
+        const args = command.split(' ').slice(1);
+
+        switch (cmd) {
             case '/help':
-                return `🤖 *${BOT_CONFIG.name} - Help*\n\n*Available Commands:*\n${Object.entries(BOT_CONFIG.commands).map(([cmd, desc]) => `${cmd} - ${desc}`).join('\n')}\n\n*How to use:*\nJust send me any message and I'll respond with AI assistance! No special commands needed for regular conversations.`;
+                return `🤖 *${BOT_CONFIG.name} - Help*\n\n*Available Commands:*\n${Object.entries(BOT_CONFIG.commands).map(([cmd, desc]) => `${cmd} - ${desc}`).join('\n')}\n\n*Current Model:* ${this.getUserModel(userId)}\n\n*How to use:*\nJust send me any message and I'll respond with AI assistance!`;
             
             case '/status':
                 const status = await this.checkSessionStatus();
-                return `🔄 *Bot Status*\n\n✅ Bot: Running\n📱 WhatsApp: ${status.state}\n🤖 AI API: Connected\n⏰ Last Activity: ${new Date().toLocaleString()}`;
+                const currentModel = this.getUserModel(userId);
+                return `🔄 *Bot Status*\n\n✅ Bot: Running\n📱 WhatsApp: ${status.state}\n🤖 Current AI Model: ${currentModel}\n👥 Active Users: ${this.userPreferences.size}\n⏰ Last Activity: ${new Date().toLocaleString()}`;
             
             case '/about':
-                return `🤖 *About ${BOT_CONFIG.name}*\n\n${BOT_CONFIG.description}\n\n*Features:*\n• AI-powered conversations\n• Real-time responses\n• Multi-language support\n• 24/7 availability\n\n*Powered by:*\n• Advanced AI technology\n• WhatsApp Web API\n• Secure cloud hosting`;
+                return `🤖 *About ${BOT_CONFIG.name}*\n\n${BOT_CONFIG.description}\n\n*Available AI Models:*\n🧠 Chat: GPT-4, GPT-4o, GPT-5, Gemini 2.5, O1, O3\n🎨 Images: Imagen 3, 3.1, 3.5\n🎥 Video: Veo3\n\n*Features:*\n• Multiple AI model support\n• Real-time responses\n• Image generation\n• Model switching\n• 24/7 availability`;
+            
+            case '/models':
+                let modelsList = `🤖 *Available AI Models*\n\n`;
+                modelsList += `*💬 Chat Models:*\n${AI_MODELS.chat.map(m => `• ${m.name} (${m.id})`).join('\n')}\n\n`;
+                modelsList += `*🎨 Image Models:*\n${AI_MODELS.image.map(m => `• ${m.name} (${m.id})`).join('\n')}\n\n`;
+                modelsList += `*🎥 Video Models:*\n${AI_MODELS.video.map(m => `• ${m.name} (${m.id})`).join('\n')}\n\n`;
+                modelsList += `*Current:* ${this.getUserModel(userId)}\n\nUse /model [id] to switch models`;
+                return modelsList;
+            
+            case '/model':
+                if (args.length === 0) {
+                    return `🤖 Current model: *${this.getUserModel(userId)}*\n\nUse /model [id] to switch models\nUse /models to see all available models`;
+                }
+                
+                const modelId = args[0];
+                const model = this.setUserModel(userId, modelId);
+                if (model) {
+                    return `✅ Switched to *${model.name}* (${model.id})\n\n🏷️ Provider: ${model.provider}\n📝 Type: ${model.type}`;
+                } else {
+                    return `❌ Model "${modelId}" not found.\n\nUse /models to see available models`;
+                }
             
             default:
                 return `❓ Unknown command: ${command}\n\nType /help to see available commands, or just send me a regular message for AI assistance!`;

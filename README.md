@@ -45,25 +45,23 @@ npm start
 
 ## ⚙️ Configuration
 
-### Required Environment Variables
+### Pre-configured Settings (No .env needed!)
 
-```env
-# WhatsApp API Configuration
-WHATSAPP_API_URL=https://wp.privateinstance.com
-WHATSAPP_SESSION_ID=your-session-id
-WHATSAPP_API_KEY=your-api-key
+All configuration is hardcoded in the application for easy deployment:
 
-# OpenAI Compatible API Configuration
-OPENAI_API_URL=https://longcat-openai-api.onrender.com
-OPENAI_API_KEY=your-openai-api-key
+```javascript
+// WhatsApp API - Your verified session
+WHATSAPP_API_URL: 'https://wp.privateinstance.com'
+WHATSAPP_SESSION_ID: 'b8c7031a-b7e2-44c7-b626-6eded8475135'
+WHATSAPP_API_KEY: '6db5e284-b9e6-4315-b60b-b66faa9ab3c5'
 
-# Server Configuration
-PORT=3000
-NODE_ENV=production
+// OpenAI Compatible API - Your working endpoint
+OPENAI_API_URL: 'https://longcat-openai-api.onrender.com'
+OPENAI_API_KEY: 'pikachu@#25D'
 
-# Bot Configuration
-BOT_NAME=AhamAI
-BOT_DESCRIPTION=Your intelligent WhatsApp assistant powered by AI
+// Bot Configuration
+BOT_NAME: 'AhamAI'
+DEFAULT_MODEL: 'gpt-4o'
 ```
 
 ### WhatsApp API Setup
@@ -76,10 +74,16 @@ Your WhatsApp session details:
 
 ### AI API Setup
 
-Your OpenAI-compatible API:
+Your OpenAI-compatible API with multiple models:
 - **Endpoint:** `https://longcat-openai-api.onrender.com`
 - **API Key:** `pikachu@#25D`
 - **Status:** ✅ Verified and Working
+
+**🤖 Available AI Models:**
+- **Chat Models:** GPT-4, GPT-4o, GPT-5, Gemini 2.5 Pro/Deep/Flash, OpenAI O1/O3, LongCat Chat, Nano Banana
+- **Image Models:** Imagen 3, 3.1, 3.5
+- **Video Models:** Veo3 Image-to-Video
+- **Default Model:** GPT-4o
 
 ## 📚 API Endpoints
 
@@ -95,8 +99,11 @@ Your OpenAI-compatible API:
 | Command | Description |
 |---------|-------------|
 | `/help` | Show available commands and bot information |
-| `/status` | Check bot status |
-| `/about` | Learn more about AhamAI |
+| `/status` | Check bot status and current AI model |
+| `/about` | Learn more about AhamAI and available models |
+| `/models` | List all available AI models |
+| `/model [name]` | Switch to a specific AI model |
+| `/image [prompt]` | Generate an image using AI |
 
 ## 🛠️ Deployment Guide
 
@@ -108,7 +115,7 @@ Your OpenAI-compatible API:
    - Build Command: `npm install`
    - Start Command: `npm start`
    - Environment: Node
-4. **Add environment variables** (see Configuration section)
+4. **No environment variables needed!** (All configuration is hardcoded)
 5. **Deploy the service**
 
 ### Post-Deployment Setup

@@ -10,19 +10,5 @@ services:
         value: production
       - key: PORT
         generateValue: true
-      - key: WHATSAPP_API_URL
-        value: https://wp.privateinstance.com
-      - key: WHATSAPP_SESSION_ID
-        sync: false
-      - key: WHATSAPP_API_KEY
-        sync: false
-      - key: OPENAI_API_URL
-        value: https://longcat-openai-api.onrender.com
-      - key: OPENAI_API_KEY
-        sync: false
-      - key: BOT_NAME
-        value: AhamAI
-      - key: BOT_DESCRIPTION
-        value: Your intelligent WhatsApp assistant powered by AI
     healthCheckPath: /health
     autoDeploy: true

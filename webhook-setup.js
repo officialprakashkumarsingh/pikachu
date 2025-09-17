@@ -1,11 +1,10 @@
 const axios = require('axios');
-require('dotenv').config();
 
-// Configuration
+// Configuration - Hardcoded (no .env needed)
 const WHATSAPP_CONFIG = {
-    baseURL: process.env.WHATSAPP_API_URL || 'https://wp.privateinstance.com',
-    sessionId: process.env.WHATSAPP_SESSION_ID,
-    apiKey: process.env.WHATSAPP_API_KEY
+    baseURL: 'https://wp.privateinstance.com',
+    sessionId: 'b8c7031a-b7e2-44c7-b626-6eded8475135',
+    apiKey: '6db5e284-b9e6-4315-b60b-b66faa9ab3c5'
 };
 
 // Your deployed Render URL - UPDATE THIS AFTER DEPLOYMENT
